@@ -1,0 +1,111 @@
+from flask import Flask, render_template
+import pandas as pd
+from io import StringIO
+import matplotlib.pyplot as plt
+import seaborn as sns
+import io
+import base64
+
+app = Flask(__name__)
+
+df = pd.read_csv('creditcard.csv')
+
+@app.route('/datos')
+def mostrar_datos():
+
+    data_html = df.head().to_html(classes='table table-bordered table-condensed table-striped')
+    return render_template('mostrar_datos.html', data_html=data_html)
+
+@app.route('/tamano')
+def obtener_tamaño():
+    tamaño = df.shape  
+    mensaje = f'El DataFrame tiene {tamaño[0]} filas y {tamaño[1]} columnas.'
+    return render_template('mostrar_datos.html', mensaje=mensaje)
+
+@app.route('/estdes')
+def mostrar_estadisticas():
+
+    estadisticas_html = df.describe().to_html(classes='table table-bordered table-condensed table-striped')
+    return render_template('estdes.html', data_html=estadisticas_html, mensaje="")
+
+@app.route('/info')
+def mostrar_info():
+    buffer = StringIO()
+    df.info(buf=buffer)
+    data_info = buffer.getvalue()
+    mensaje = "Descripción detallada del DataFrame en comparación con df.shape o df.describe()"
+
+
+@app.route('/histog')
+def mostrar_histogramas_imagen():
+    num_cols = ['Time', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'V17', 'V18', 'V19', 'V20', 'V21', 'V22', 'V23', 'V24', 'V25', 'V26', 'V27', 'V28', 'Amount']  # Reemplaza con los nombres de tus columnas
+
+    n_cols = 4
+    n_rows = len(num_cols) // n_cols + (1 if len(num_cols) % n_cols > 0 else 0)
+    
+
+    fig, axs = plt.subplots(n_rows, n_cols, figsize=(20, n_rows * 4))
+    
+    for i, column in enumerate(num_cols):
+        row_index = i // n_cols
+        col_index = i % n_cols
+        
+        try:
+     
+            sns.histplot(df[column], ax=axs[row_index, col_index])
+            axs[row_index, col_index].set_title(f"{column} Histograma")
+        except KeyError:
+            axs[row_index, col_index].axis('off') 
+    
+
+    for i in range(len(num_cols), n_cols * n_rows):
+        fig.delaxes(plt.gca())
+    
+    plt.tight_layout()
+
+ 
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    image_data = base64.b64encode(buffer.read()).decode()
+    
+    return render_template('mostrar_histogramas.html', imagen_data=image_data)
+
+
+
+
+@app.route('/cajas')
+def mostrar_cajas():
+    num_cols = ['Time', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15', 'V16', 'V17', 'V18', 'V19', 'V20', 'V21', 'V22', 'V23', 'V24', 'V25', 'V26', 'V27', 'V28', 'Amount']  # Reemplaza con los nombres de tus columnas
+
+    n_cols = 4
+    n_rows = len(num_cols) // n_cols + (1 if len(num_cols) % n_cols > 0 else 0)
+    
+    fig, axs = plt.subplots(n_rows, n_cols, figsize=(20, n_rows * 4))
+    
+    for i, column in enumerate(num_cols):
+        row_index = i // n_cols
+        col_index = i % n_cols
+        
+        try:
+
+            sns.boxplot(x=df[column], ax=axs[row_index, col_index])
+            axs[row_index, col_index].set_title(f"{column} Box Plot")
+        except KeyError:
+            axs[row_index, col_index].axis('off')  
+    
+ 
+    for i in range(len(num_cols), n_cols * n_rows):
+        fig.delaxes(plt.gca())
+    
+    plt.tight_layout()
+    
+    img_data = io.BytesIO()
+    plt.savefig(img_data, format='png')
+    img_data.seek(0)
+    img_base64 = base64.b64encode(img_data.read()).decode()
+    
+    return render_template('mostrar_cajas.html', imagen_base64=img_base64)
+
+if __name__ == '__main__':
+    app.run(debug=True)
