@@ -1,0 +1,90 @@
+#calculamos la proporción de cada clase en la columna Class
+(df["Class"].value_counts() * 100) / df.shape[0]
+
+# Podemos ver que los datos están desequilibrados, por lo que debemos solucionarlo.
+#Si no lo hace, el modelo estará sesgado y la clase "0" dominará a "1" cuando prediquemos
+
+#calculamos las medias de las columnas numéricas para cada categoría de la columna
+#Con esto podemos identificar diferencias en las medias de las características entre las transacciones normales y las fraudulentas
+df.groupby("Class")[num_cols].mean()
+
+y = df["Class"]
+X = df.drop("Class", axis=1) # DataFrame X que contiene todas las columnas excepto "Class"
+
+#dividimos los datos en un conjunto de entrenamiento y uno de prueba
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=17)
+#el 20% de los datos es el conjunto de prueba, el 80% el de entrenamiento
+# "random_state=17" es la semilla aleatoria, que permite reproducibilidad en los resultados
+
+base_model = RandomForestClassifier().fit(X_train, y_train) #modelo de clasificación de bosque aleatorio
+
+#evaluamos el rendimiento del modelo y calcular métricas de evaluación
+y_pred = base_model.predict(X_test)
+
+#evaluamos cuántos casos de fraude se detectan correctamente y cuántos se clasifican incorrectamente
+#esta función toma valores y (las etiquetas reales) y y_pred (las etiquetas predichas por el modelo).
+def plot_confusion_matrix(y, y_pred):
+    acc = round(accuracy_score(y, y_pred), 2) #calcula la precisión ( proporción de predicciones correctas en comparación con el total de predicciones)
+    cm = confusion_matrix(y_test, y_pred)
+    disp = ConfusionMatrixDisplay(cm)
+    disp.plot(cmap=plt.cm.Blues)
+    plt.title('Matriz de confusión')
+    plt.show()
+
+
+plot_confusion_matrix(y_test, y_pred)
+print(classification_report(y_test, y_pred))
+
+#División de datos en conjuntos de entrenamiento y prueba
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=17)
+
+# Oversampling
+oversample = SMOTE() #Se crea una instancia de la técnica de sobremuestreo SMOTE. SMOTE se utiliza para abordar el desequilibrio de clases, especialmente cuando una clase es significativamente más pequeña que la otra.
+X_smote, y_smote = oversample.fit_resample(X_train, y_train)#genera muestras sintéticas de la clase minoritaria (fraude) para equilibrar las clases
+
+#verificar dimensiones de datos de entrenamiento
+X_train.shape
+
+# dimensiones de los datos de entrenamiento
+X_smote.shape
+
+#verifica las dimensiones de los datos de prueba y se asegura de que coincida
+#con las dimensiones de tus datos de entrenamiento, lo que es esencial para realizar predicciones con éxito
+X_test.shape
+
+model = RandomForestClassifier().fit(X_smote, y_smote)
+
+y_pred = model.predict(X_test)
+
+def plot_confusion_matrix(y, y_pred):
+    acc = round(accuracy_score(y, y_pred), 2)
+    cm = confusion_matrix(y_test, y_pred)
+    disp = ConfusionMatrixDisplay(cm)
+    disp.plot(cmap=plt.cm.Blues)
+    plt.title('Matriz de confusión')
+    plt.show()
+
+
+plot_confusion_matrix(y_test, y_pred)
+print(classification_report(y_test, y_pred))
+
+from sklearn.model_selection import cross_validate
+#realizamos una validación cruzada del modelo de clasificación de Bosque Aleatorio (model) en un conjunto de datos.
+cv_results = cross_validate(model, X, y, cv=5, scoring=["accuracy", "f1", "roc_auc"])
+
+cv_results["test_f1"].mean()
+
+#El resultado es el puntaje F1 promedio del modelo durante la validación cruzada.
+#Este valor te da una idea general de cuán bien el modelo puede equilibrar la precisión
+#y el recall en la detección de fraude en tus datos. Cuanto mayor sea el puntaje F1, mejor será el rendimiento del modelo.
+
+cv_results["test_roc_auc"].mean()
+
+#El resultado es el valor promedio del área bajo la curva ROC del modelo durante la validación cruzada.
+#Cuanto mayor sea el valor de ROC-AUC, mejor será el rendimiento del modelo en términos de discriminación entre clases.
+#Esto es importante en problemas de detección de fraudes, donde se busca identificar casos positivos (fraude) con la mayor precisión posible.
+
+cv_results["test_accuracy"].mean()
+
+#El resultado es el valor promedio de la precisión del modelo durante la validación cruzada.
+#Cuanto mayor sea el valor de la precisión, mejor será el rendimiento del modelo en términos de la proporción de predicciones correctas.
