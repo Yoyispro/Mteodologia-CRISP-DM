@@ -1,0 +1,66 @@
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from imblearn.over_sampling import SMOTE
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, ConfusionMatrixDisplay
+
+# Cargar los datos desde un archivo CSV
+df = pd.read_csv('/content/creditcard.csv')
+df.head()
+
+df.shape
+
+df.describe()
+
+df.info()
+
+#determinar si los datos contienen valores faltantes
+df.isnull().sum().any()
+
+#num_cols contendrá los nombres de las columnas numéricas que cumplen con las condiciones:
+#no son columnas de tipo cadena (categóricas) y tienen más de 5 valores únicos
+#
+num_cols = [col for col in df.columns if df[col].dtype != "O" and df[col].nunique() > 5]
+target = df["Class"]
+num_cols
+
+# Histogramas
+n_cols = 4
+n_rows = len(num_cols) // n_cols + (1 if len(num_cols) % n_cols > 0 else 0)
+fig, axs = plt.subplots(n_rows, n_cols, figsize=(20, n_rows * 4))
+
+for i, column in enumerate(num_cols):
+    row_index = i // n_cols
+    col_index = i % n_cols
+
+    sns.histplot(df[column], ax=axs[row_index, col_index])
+    axs[row_index, col_index].set_title(f"{column} Distribution")
+
+# si hay algún gráfico vacío, lo eliminamos
+for i in range(len(num_cols), n_cols * n_rows):
+    fig.delaxes(plt.gca())
+
+plt.tight_layout()
+plt.show()
+
+# Diagrama de caja de números
+n_cols = 4
+n_rows = len(num_cols) // n_cols + (1 if len(num_cols) % n_cols > 0 else 0)
+fig, axs = plt.subplots(n_rows, n_cols, figsize=(20, n_rows * 4))
+
+for i, column in enumerate(num_cols):
+    row_index = i // n_cols
+    col_index = i % n_cols
+
+    sns.boxplot(x=df[column], ax=axs[row_index, col_index])
+    axs[row_index, col_index].set_title(f"{column} Box Plot")
+
+
+for i in range(len(num_cols), n_cols * n_rows):
+    fig.delaxes(plt.gca())
+
+plt.tight_layout()
+plt.show()
